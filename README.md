@@ -167,7 +167,20 @@ FROM retail_sales
 GROUP BY category
 ```
 
-10. **Write a SQL query to create each shift and number of orders (Example Morning <12, Afternoon Between 12 & 17, Evening >17)**:
+10. **Write a query to get sales by gender.**
+```sql
+select 
+	gender,
+	sum(total_sale) as Sale_by_gender
+from 
+	retail_sales
+group by 
+	gender
+order by
+	sum(total_sale) desc
+```
+
+11. **Write a SQL query to create each shift and number of orders (Example Morning <12, Afternoon Between 12 & 17, Evening >17)**:
 ```sql
 WITH hourly_sale
 AS
@@ -187,12 +200,181 @@ FROM hourly_sale
 GROUP BY shift
 ```
 
+12.**Write a query to find the top 3 total sales for each customer along by their age.**
+```sql
+select top 3
+	age,
+	sum(total_sale) as TotalSale
+from 
+	retail_sales
+group by 
+	age
+order by 
+	sum(total_sale) desc
+```
+
+13.**Write a query to find the highest total sales on each day.**
+```sql
+select 
+	day(sale_date) as date,
+	max(total_sale) as highestSale
+from 
+	retail_sales
+group by 
+	day(Sale_date)
+```
+
+14.**Write a query to find the total sales for each month in a given year.**
+```sql
+select 
+	year(sale_date) as Year,
+	datename(month,sale_date) as month,
+	sum(total_sale) as MonthlySales
+from
+	retail_sales
+group by 
+	year(sale_date),
+	datename(month,sale_date)
+order by 
+	year(sale_date)
+```
+
+15.**write  a query to get percentage sale increase or decrease from previous year.**
+```sql
+with Sales as
+(
+select
+	year(sale_date) as [Year],
+	sum(total_sale) as TotalSale
+from 
+	retail_sales
+group by
+	year(sale_date)
+)
+select
+	[Year],
+	TotalSale,
+	lag(TotalSale) over(order by [Year]) as Prev_sale,
+	round((TotalSale - lag(TotalSale) over(order by [Year]))/TotalSale*100,2) as PercantageSale
+from 
+	Sales
+```
+
+16.**Write a query to calculate the profit for each transaction.**
+```sql
+select 
+	transactions_id,
+	sale_date,
+	sale_time,
+	customer_id,
+	round(total_sale - (quantity*cogs),2) as Profit
+from 
+	retail_sales
+```
+17.**Write a query to find the total sales by customer age group (e.g., 18-25, 26-35, 36-45). 
+     Group the customers into age ranges and calculate the total sales for each group.**
+```sql
+select
+	case
+		when age between 18 and 25 then '18-25'
+		when age between 26 and 35 then '26-35'
+		when age between 36 and 45 then '36-45'
+		when age between 46 and 55 then '46-55'
+		else '55+' 
+	end as AgewiseSale,
+	sum(total_sale) as TotalSale
+from
+	retail_sales
+group by 
+	case
+		when age between 18 and 25 then '18-25'
+		when age between 26 and 35 then '26-35'
+		when age between 36 and 45 then '36-45'
+		when age between 46 and 55 then '46-55'
+		else '55+' 
+	end 
+order by 
+	sum(total_sale) desc
+```
+
+18.**Write a query to find the first and last sale in each year.**
+
+```sql
+WITH SalesRank AS
+(
+    SELECT
+        sale_date,
+        total_sale,
+        YEAR(sale_date) AS SaleYear,
+        FIRST_VALUE(sale_date) OVER (PARTITION BY YEAR(sale_date) ORDER BY sale_date ASC) AS FirstSale,
+        LAST_VALUE(sale_date) OVER (PARTITION BY YEAR(sale_date) ORDER BY sale_date ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS LastSale
+    FROM
+        retail_sales
+)
+SELECT
+    SaleYear,
+    MIN(FirstSale) AS FirstSaleDate,
+    MAX(LastSale) AS LastSaleDate
+FROM
+    SalesRank
+GROUP BY
+    SaleYear
+ORDER BY
+    SaleYear;
+```
+
+19.**Write a query to calculate the difference in total sales between consecutive sale.**
+
+```sql
+select
+	sale_date,
+	total_sale,
+	total_sale - lag(total_sale) over(order by sale_date) as diff_sales
+from	
+	retail_sales
+order by 
+	sale_date
+```
+20.**Write a query to rank products (by category) based on the total quantity sold (quantity).**
+```sql
+select 
+	category,
+	sum(quantity)as total,
+	rank() over(order by sum(quantity) desc) as rank
+from
+	retail_sales
+group by 
+	category
+```
+
+21.**Write a query to find the second-highest total sale for each customer.** 
+```sql
+with sales as
+(
+select
+	customer_id,
+	total_sale,
+	dense_rank() over(partition by total_sale order by sum(total_sale)) as rank
+from
+	retail_sales
+group by
+	customer_id,total_sale
+)
+select *
+from	
+	sales
+where 
+	rank = 2
+```
+
 ## Findings
 
 - **Customer Demographics**: The dataset includes customers from various age groups, with sales distributed across different categories such as Clothing and Beauty.
 - **High-Value Transactions**: Several transactions had a total sale amount greater than 1000, indicating premium purchases.
 - **Sales Trends**: Monthly analysis shows variations in sales, helping identify peak seasons.
+- **Yearly Sales** : Percantage increase in sales as well as consecutive sales .
 - **Customer Insights**: The analysis identifies the top-spending customers and the most popular product categories.
+- **Profit** : Profit analysis by the seller on all product.
 
 ## Reports
 
@@ -211,17 +393,8 @@ This project serves as a comprehensive introduction to SQL for data analysts, co
 3. **Run the Queries**: Use the SQL queries provided in the `analysis_queries.sql` file to perform your analysis.
 4. **Explore and Modify**: Feel free to modify the queries to explore different aspects of the dataset or answer additional business questions.
 
-## Author - Zero Analyst
+## Author - Mohd Arman Mansuri(armanmansuri740@gmail.com)
 
-This project is part of my portfolio, showcasing the SQL skills essential for data analyst roles. If you have any questions, feedback, or would like to collaborate, feel free to get in touch!
-
-### Stay Updated and Join the Community
-
-For more content on SQL, data analysis, and other data-related topics, make sure to follow me on social media and join our community:
-
-- **YouTube**: [Subscribe to my channel for tutorials and insights](https://www.youtube.com/@zero_analyst)
-- **Instagram**: [Follow me for daily tips and updates](https://www.instagram.com/zero_analyst/)
-- **LinkedIn**: [Connect with me professionally](https://www.linkedin.com/in/najirr)
-- **Discord**: [Join our community to learn and grow together](https://discord.gg/36h5f2Z5PK)
+This project is part of my portfolio, showcasing the SQL skills essential for data analyst roles. If you have any questions, feedback,feel free to get in touch!
 
 Thank you for your support, and I look forward to connecting with you!
